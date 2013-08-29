@@ -30,7 +30,7 @@ class RakeTaskTest < Apartment::Test
     @tenants.each{ |t| Company.create(database: t) }
   end
 
-  def teardown 
+  def teardown
     Rake.application = nil
     Company.delete_all
 
