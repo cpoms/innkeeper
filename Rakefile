@@ -1,24 +1,18 @@
 require 'bundler' rescue 'You must `gem install bundler` and `bundle install` to run rake tasks'
 Bundler.setup
 Bundler::GemHelper.install_tasks
+require "rake/testtask"
+require 'yaml'
+
+Rake::TestTask.new do |t|
+  t.libs = ["lib"]
+  t.warning = false
+  # t.verbose = true
+  t.test_files = FileList['test/*_test.rb']
+end
 
 require 'appraisal'
-
-require "rspec"
-require "rspec/core/rake_task"
-
-RSpec::Core::RakeTask.new(:spec => %w{ db:copy_credentials db:test:prepare }) do |spec|
-  spec.pattern = "spec/**/*_spec.rb"
-  # spec.rspec_opts = '--order rand:16996'
-end
-
-namespace :spec do
-  [:tasks, :unit, :adapters, :integration].each do |type|
-    RSpec::Core::RakeTask.new(type => :spec) do |spec|
-      spec.pattern = "spec/#{type}/**/*_spec.rb"
-    end
-  end
-end
+# require "#{File.join(File.dirname(__FILE__), 'test', 'test_helper')}"
 
 task :console do
   require 'pry'
@@ -27,18 +21,18 @@ task :console do
   Pry.start
 end
 
-task :default => :spec
+task default: :test
 
 namespace :db do
   namespace :test do
-    task :prepare => %w{postgres:drop_db postgres:build_db mysql:drop_db mysql:build_db}
+    task prepare: %w{postgres:drop_db postgres:build_db mysql:drop_db mysql:build_db}
   end
 
   desc "copy sample database credential files over if real files don't exist"
   task :copy_credentials do
     require 'fileutils'
-    apartment_db_file = 'spec/config/database.yml'
-    rails_db_file = 'spec/dummy/config/database.yml'
+    apartment_db_file = 'test/databases.yml'
+    rails_db_file = 'test/dummy/config/database.yml'
 
     FileUtils.copy(apartment_db_file + '.sample', apartment_db_file, :verbose => true) unless File.exists?(apartment_db_file)
     FileUtils.copy(rails_db_file + '.sample', rails_db_file, :verbose => true)         unless File.exists?(rails_db_file)
@@ -47,13 +41,14 @@ end
 
 namespace :postgres do
   require 'active_record'
-  require "#{File.join(File.dirname(__FILE__), 'spec', 'support', 'config')}"
 
   desc 'Build the PostgreSQL test databases'
   task :build_db do
     %x{ createdb -E UTF8 #{pg_config['database']} -U#{pg_config['username']} } rescue "test db already exists"
     ActiveRecord::Base.establish_connection pg_config
-    ActiveRecord::Migrator.migrate('spec/dummy/db/migrate')
+    ActiveRecord::Migration.suppress_messages do
+      load(File.join(File.dirname(__FILE__), "test/dummy/db/schema.rb"))
+    end
   end
 
   desc "drop the PostgreSQL test database"
@@ -66,26 +61,26 @@ end
 
 namespace :mysql do
   require 'active_record'
-  require "#{File.join(File.dirname(__FILE__), 'spec', 'support', 'config')}"
 
   desc 'Build the MySQL test databases'
   task :build_db do
-    %x{ mysqladmin -u #{my_config['username']} --password=#{my_config['password']} create #{my_config['database']} } rescue "test db already exists"
+    %x{ /usr/local/mysql/bin/mysqladmin -u #{my_config['username']} --password=#{my_config['password']} create #{my_config['database']} } rescue "test db already exists"
     ActiveRecord::Base.establish_connection my_config
-    ActiveRecord::Migrator.migrate('spec/dummy/db/migrate')
+    ActiveRecord::Migration.suppress_messages do
+      load(File.join(File.dirname(__FILE__), "test/dummy/db/schema.rb"))
+    end
   end
 
   desc "drop the MySQL test database"
   task :drop_db do
     puts "dropping database #{my_config['database']}"
-    %x{ mysqladmin -u #{my_config['username']} --password=#{my_config['password']} drop #{my_config['database']} --force}
+    %x{ /usr/local/mysql/bin/mysqladmin -u #{my_config['username']} --password=#{my_config['password']} drop #{my_config['database']} --force}
   end
 
 end
 
-# TODO clean this up
 def config
-  Apartment::Test.config['connections']
+  @config ||= YAML.load(ERB.new(IO.read('test/databases.yml')).result)['connections']
 end
 
 def pg_config

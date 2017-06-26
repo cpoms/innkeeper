@@ -5,34 +5,45 @@ require 'active_record'
 require 'apartment/tenant'
 
 module Apartment
-
   class << self
-
     extend Forwardable
 
-    ACCESSOR_METHODS  = [:use_schemas, :use_sql, :seed_after_create, :prepend_environment, :append_environment, :with_multi_server_setup ]
-    WRITER_METHODS    = [:tenant_names, :database_schema_file, :excluded_models, :default_schema, :persistent_schemas, :connection_class, :tld_length, :db_migrate_tenants, :seed_data_file]
+    ACCESSOR_METHODS = [
+      :use_sql, :seed_after_create, :tenant_decorator,
+      :force_reconnect_on_switch
+    ]
+    WRITER_METHODS   = [
+      :tenant_names, :database_schema_file, :excluded_models,
+      :persistent_schemas, :connection_class, :tld_length, :db_migrate_tenants,
+      :seed_data_file, :default_tenant
+    ]
+    OTHER_METHODS    = [:tenant_resolver, :resolver_class]
 
     attr_accessor(*ACCESSOR_METHODS)
     attr_writer(*WRITER_METHODS)
 
-    def_delegators :connection_class, :connection, :connection_config, :establish_connection
+    def_delegators :connection_class, :connection, :connection_config,
+      :establish_connection, :connection_handler
 
-    # configure apartment with available options
     def configure
       yield self if block_given?
     end
 
+    def tenant_resolver
+      @tenant_resolver ||= @resolver_class.new(connection_config)
+    end
+
+    def tenant_resolver=(resolver_class)
+      remove_instance_variable(:@tenant_resolver) if instance_variable_defined?(:@tenant_resolver)
+      @resolver_class = resolver_class
+    end
+
     def tenant_names
-      extract_tenant_config.keys.map(&:to_s)
+      @tenant_names.respond_to?(:call) ? @tenant_names.call : (@tenant_names || [])
     end
 
     def tenants_with_config
       extract_tenant_config
-    end
-
-    def db_config_for(tenant)
-      (tenants_with_config[tenant] || connection_config).with_indifferent_access
     end
 
     # Whether or not db:migrate should also migrate tenants
@@ -48,11 +59,9 @@ module Apartment
       @excluded_models || []
     end
 
-    def default_schema
-      @default_schema || "public" # TODO 'public' is postgres specific
+    def default_tenant
+      @default_tenant || tenant_resolver.init_config
     end
-    alias :default_tenant :default_schema
-    alias :default_tenant= :default_schema=
 
     def persistent_schemas
       @persistent_schemas || []
@@ -74,22 +83,10 @@ module Apartment
       @seed_data_file = "#{Rails.root}/db/seeds.rb"
     end
 
-    # Reset all the config for Apartment
     def reset
-      (ACCESSOR_METHODS + WRITER_METHODS).each{|method| remove_instance_variable(:"@#{method}") if instance_variable_defined?(:"@#{method}") }
-    end
-
-    def extract_tenant_config
-      return {} unless @tenant_names
-      values = @tenant_names.respond_to?(:call) ? @tenant_names.call : @tenant_names
-      unless values.is_a? Hash
-        values = values.each_with_object({}) do |tenant, hash|
-          hash[tenant] = connection_config
-        end
+      (ACCESSOR_METHODS + WRITER_METHODS + OTHER_METHODS).each do |method|
+        remove_instance_variable(:"@#{method}") if instance_variable_defined?(:"@#{method}")
       end
-      values.with_indifferent_access
-    rescue ActiveRecord::StatementInvalid
-      {}
     end
   end
 

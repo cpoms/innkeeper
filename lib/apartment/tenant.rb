@@ -8,9 +8,9 @@ module Apartment
     extend self
     extend Forwardable
 
-    def_delegators :adapter, :create, :drop, :switch, :switch!, :current, :each, :reset, :set_callback, :seed, :current_tenant, :default_tenant
-
-    attr_writer :config
+    def_delegators :adapter, :create, :drop, :drop_schema, :switch, :switch!,
+      :current, :each, :reset, :set_callback, :seed, :current_tenant,
+      :default_tenant, :config_for
 
     #   Initialize Apartment config options such as excluded_models
     #
@@ -24,43 +24,32 @@ module Apartment
     #
     def adapter
       Thread.current[:apartment_adapter] ||= begin
-        adapter_method = "#{config[:adapter]}_adapter"
+        config = Apartment.default_tenant
 
-        if defined?(JRUBY_VERSION)
-          if config[:adapter] =~ /mysql/
-            adapter_method = 'jdbc_mysql_adapter'
-          elsif config[:adapter] =~ /postgresql/
-            adapter_method = 'jdbc_postgresql_adapter'
+        adapter_name =
+          if defined?(JRUBY_VERSION)
+            if config[:adapter] =~ /mysql/
+              'jdbc_mysql_adapter'
+            elsif config[:adapter] =~ /postgresql/
+              'jdbc_postgresql_adapter'
+            end
+          else
+            "#{config[:adapter]}_adapter"
           end
-        end
 
         begin
-          require "apartment/adapters/#{adapter_method}"
-        rescue LoadError
-          raise "The adapter `#{adapter_method}` is not yet supported"
+          require "apartment/adapters/#{adapter_name}"
+          adapter_class = Adapters.const_get(adapter_name.classify)
+        rescue LoadError, NameError
+          raise AdapterNotFound, "The adapter `#{adapter_name}` is not yet supported"
         end
 
-        unless respond_to?(adapter_method)
-          raise AdapterNotFound, "database configuration specifies nonexistent #{config[:adapter]} adapter"
-        end
-
-        send(adapter_method, config)
+        adapter_class.new
       end
     end
 
-    #   Reset config and adapter so they are regenerated
-    #
-    def reload!(config = nil)
+    def reload!
       Thread.current[:apartment_adapter] = nil
-      @config = config
-    end
-
-    private
-
-    #   Fetch the rails database configuration
-    #
-    def config
-      @config ||= Apartment.connection_config
     end
   end
 end

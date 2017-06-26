@@ -4,259 +4,147 @@ module Apartment
       include ActiveSupport::Callbacks
       define_callbacks :create, :switch
 
-      attr_writer :default_tenant
+      attr_reader :current
 
-      #   @constructor
-      #   @param {Hash} config Database config
-      #
-      def initialize(config)
-        @config = config
+      def initialize
+        reset
       end
 
-      #   Create a new tenant, import schema, seed if appropriate
-      #
-      #   @param {String} tenant Tenant name
-      #
+      def reset
+        switch!(Apartment.default_tenant)
+      end
+
+      def switch(tenant = nil)
+        previous_tenant = @current
+        switch!(tenant)
+
+        yield
+      ensure
+        switch!(previous_tenant) rescue reset
+      end
+
       def create(tenant)
         run_callbacks :create do
-          create_tenant(tenant)
+          begin
+            previous_tenant = @current
+            config = config_for(tenant)
+            difference = current_difference_from(config)
 
-          switch(tenant) do
+            if difference[:host]
+              connection_switch(config, without_keys: [:database, :schema_search_path])
+            end
+
+            create_tenant!(config)
+            simple_switch(config)
+            @current = tenant
+
             import_database_schema
-
-            # Seed data if appropriate
             seed_data if Apartment.seed_after_create
 
             yield if block_given?
+          ensure
+            switch!(previous_tenant) rescue reset
           end
         end
       end
 
-      #   Note alias_method here doesn't work with inheritence apparently ??
-      #
-      def current
-        Apartment.connection.current_database
-      end
-
-      #   Return the original public tenant
-      #
-      #   @return {String} default tenant name
-      #
-      def default_tenant
-        @default_tenant || Apartment.default_tenant
-      end
-      alias :default_schema :default_tenant # TODO deprecate default_schema
-
-      #   Drop the tenant
-      #
-      #   @param {String} tenant name
-      #
       def drop(tenant)
-        with_neutral_connection(tenant) do |conn|
-          drop_command(conn, tenant)
+        previous_tenant = @current
+
+        config = config_for(tenant)
+        difference = current_difference_from(config)
+
+        if difference[:host]
+          connection_switch(config, without_keys: [:database])
         end
 
-      rescue *rescuable_exceptions => exception
-        raise_drop_tenant_error!(tenant, exception)
+        unless database_exists?(config[:database])
+          raise TenantNotFound, "Error while dropping database #{config[:database]} for tenant #{tenant}"
+        end
+
+        Apartment.connection.drop_database(config[:database])
+
+        @current = tenant
+      ensure
+        switch!(previous_tenant) rescue reset
       end
 
-      #   Switch to a new tenant
-      #
-      #   @param {String} tenant name
-      #
-      def switch!(tenant = nil)
+      def switch!(tenant)
         run_callbacks :switch do
           return reset if tenant.nil?
 
-          connect_to_new(tenant).tap do
-            Apartment.connection.clear_query_cache
-          end
-        end
-      end
+          config = config_for(tenant)
 
-      #   Connect to tenant, do your biz, switch back to previous tenant
-      #
-      #   @param {String?} tenant to connect to
-      #
-      def switch(tenant = nil)
-        begin
-          previous_tenant = current
-          switch!(tenant)
-          yield
-
-        ensure
-          switch!(previous_tenant) rescue reset
-        end
-      end
-
-      #   Iterate over all tenants, switch to tenant and yield tenant name
-      #
-      def each(tenants = Apartment.tenant_names)
-        tenants.each do |tenant|
-          switch(tenant){ yield tenant }
-        end
-      end
-
-      #   Establish a new connection for each specific excluded model
-      #
-      def process_excluded_models
-        # All other models will shared a connection (at Apartment.connection_class) and we can modify at will
-        Apartment.excluded_models.each do |excluded_model|
-          process_excluded_model(excluded_model)
-        end
-      end
-
-      #   Reset the tenant connection to the default
-      #
-      def reset
-        Apartment.establish_connection @config
-      end
-
-      #   Load the rails seed file into the db
-      #
-      def seed_data
-        # Don't log the output of seeding the db
-        silence_warnings{ load_or_abort(Apartment.seed_data_file) } if Apartment.seed_data_file
-      end
-      alias_method :seed, :seed_data
-
-    protected
-
-      def process_excluded_model(excluded_model)
-        excluded_model.constantize.establish_connection @config
-      end
-
-      def drop_command(conn, tenant)
-        # connection.drop_database   note that drop_database will not throw an exception, so manually execute
-        conn.execute("DROP DATABASE #{conn.quote_table_name(environmentify(tenant))}")
-      end
-
-      #   Create the tenant
-      #
-      #   @param {String} tenant Database name
-      #
-      def create_tenant(tenant)
-        with_neutral_connection(tenant) do |conn|
-          create_tenant_command(conn, tenant)
-        end
-      rescue *rescuable_exceptions => exception
-        raise_create_tenant_error!(tenant, exception)
-      end
-
-      def create_tenant_command(conn, tenant)
-        conn.create_database(environmentify(tenant), @config)
-      end
-
-      #   Connect to new tenant
-      #
-      #   @param {String} tenant Database name
-      #
-      def connect_to_new(tenant)
-        Apartment.establish_connection multi_tenantify(tenant)
-        Apartment.connection.active?   # call active? to manually check if this connection is valid
-      rescue *rescuable_exceptions => exception
-        Apartment::Tenant.reset if reset_on_connection_exception?
-        raise_connect_error!(tenant, exception)
-      end
-
-      #   Prepend the environment if configured and the environment isn't already there
-      #
-      #   @param {String} tenant Database name
-      #   @return {String} tenant name with Rails environment *optionally* prepended
-      #
-      def environmentify(tenant)
-        unless tenant.include?(Rails.env)
-          if Apartment.prepend_environment
-            "#{Rails.env}_#{tenant}"
-          elsif Apartment.append_environment
-            "#{tenant}_#{Rails.env}"
+          if Apartment.force_reconnect_on_switch
+            connection_switch!(config)
           else
-            tenant
+            switch_tenant(config)
           end
-        else
+
+          @current = tenant
+
+          Apartment.connection.clear_query_cache
+
           tenant
         end
       end
 
-      #   Import the database schema
-      #
+      def config_for(tenant)
+        return tenant if tenant.is_a?(Hash)
+
+        decorated_tenant = decorate(tenant)
+        Apartment.tenant_resolver.resolve(decorated_tenant)
+      end
+
+      def decorate(tenant)
+        decorator = Apartment.tenant_decorator
+        decorator ? decorator.call(tenant) : tenant
+      end
+
+      def process_excluded_models
+        excluded_config = config_for(Apartment.default_tenant).merge(name: :_apartment_excluded)
+        Apartment.connection_handler.establish_connection(excluded_config)
+
+        Apartment.excluded_models.each do |excluded_model|
+          # user mustn't have overridden `connection_specification_name`
+          # cattr_accessor in model
+          excluded_model.constantize.connection_specification_name = :_apartment_excluded
+        end
+      end
+
+      def current_difference_from(config)
+        current_config = config_for(@current)
+        config.select{ |k, v| current_config[k] != v }
+      end
+
+      def connection_switch!(config, without_keys: [])
+        config = config.dup.tap do |c|
+          c.reject{ |k, _| without_keys.include?(k) }
+        end
+
+        Apartment.connection_handler.establish_connection(config)
+      end
+
       def import_database_schema
-        ActiveRecord::Schema.verbose = false    # do not log schema load output.
+        ActiveRecord::Schema.verbose = false
 
         load_or_abort(Apartment.database_schema_file) if Apartment.database_schema_file
       end
 
-      #   Return a new config that is multi-tenanted
-      #   @param {String}  tenant: Database name
-      #   @param {Boolean} with_database: if true, use the actual tenant's db name
-      #                                   if false, use the default db name from the db
-      def multi_tenantify(tenant, with_database = true)
-        db_connection_config(tenant).tap do |config|
-          if with_database
-            multi_tenantify_with_tenant_db_name(config, tenant)
-          end
-        end
+      def seed_data
+        silence_warnings{ load_or_abort(Apartment.seed_data_file) } if Apartment.seed_data_file
       end
 
-      def multi_tenantify_with_tenant_db_name(config, tenant)
-        config[:database] = environmentify(tenant)
-      end
-
-      #   Load a file or abort if it doesn't exists
-      #
       def load_or_abort(file)
-        if File.exists?(file)
+        if File.exist?(file)
           load(file)
         else
           abort %{#{file} doesn't exist yet}
         end
       end
 
-      #   Exceptions to rescue from on db operations
-      #
-      def rescuable_exceptions
-        [ActiveRecord::ActiveRecordError] + Array(rescue_from)
-      end
-
-      #   Extra exceptions to rescue from
-      #
-      def rescue_from
-        []
-      end
-
-      def db_connection_config(tenant)
-        Apartment.db_config_for(tenant).clone
-      end
-
-     def with_neutral_connection(tenant, &block)
-        if Apartment.with_multi_server_setup
-          # neutral connection is necessary whenever you need to create/remove a database from a server.
-          # example: when you use postgresql, you need to connect to the default postgresql database before you create your own.
-          SeparateDbConnectionHandler.establish_connection(multi_tenantify(tenant, false))
-          yield(SeparateDbConnectionHandler.connection)
-          SeparateDbConnectionHandler.connection.close
-        else
-          yield(Apartment.connection)
-        end
-      end
-
-      def reset_on_connection_exception?
-        false
-      end
-
-      def raise_drop_tenant_error!(tenant, exception)
-        raise TenantNotFound, "Error while dropping tenant #{environmentify(tenant)}: #{ exception.message }"
-      end
-
-      def raise_create_tenant_error!(tenant, exception)
-        raise TenantExists, "Error while creating tenant #{environmentify(tenant)}: #{ exception.message }"
-      end
-
       def raise_connect_error!(tenant, exception)
-        raise TenantNotFound, "Error while connecting to tenant #{environmentify(tenant)}: #{ exception.message }"
-      end
-
-      class SeparateDbConnectionHandler < ::ActiveRecord::Base
+        raise TenantNotFound, "Error while connecting to tenant #{tenant}: #{exception.message}"
       end
     end
   end

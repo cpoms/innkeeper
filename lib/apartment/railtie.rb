@@ -1,6 +1,6 @@
 require 'rails'
 require 'apartment/tenant'
-require 'apartment/reloader'
+require 'apartment/resolvers/database'
 
 module Apartment
   class Railtie < Rails::Railtie
@@ -12,11 +12,10 @@ module Apartment
     config.before_initialize do
       Apartment.configure do |config|
         config.excluded_models = []
-        config.use_schemas = true
+        config.force_reconnect_on_switch = false
         config.tenant_names = []
         config.seed_after_create = false
-        config.prepend_environment = false
-        config.append_environment = false
+        config.tenant_resolver = Apartment::Resolvers::Database
       end
 
       ActiveRecord::Migrator.migrations_paths = Rails.application.paths['db/migrate'].to_a
@@ -47,12 +46,6 @@ module Apartment
     #   Note this is technically valid for any environment where cache_classes is false, for us, it's just development
     #
     if Rails.env.development?
-
-      # Apartment::Reloader is middleware to initialize things properly on each request to dev
-      initializer 'apartment.init' do |app|
-        app.config.middleware.use Apartment::Reloader
-      end
-
       # Overrides reload! to also call Apartment::Tenant.init as well so that the reloaded classes have the proper table_names
       console do
         require 'apartment/console'

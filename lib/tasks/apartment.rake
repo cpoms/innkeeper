@@ -6,7 +6,6 @@ apartment_namespace = namespace :apartment do
   task create: 'db:migrate' do
     tenants.each do |tenant|
       begin
-        puts("Creating #{tenant} tenant")
         quietly { Apartment::Tenant.create(tenant) }
       rescue Apartment::TenantExists => e
         puts e.message
@@ -17,9 +16,9 @@ apartment_namespace = namespace :apartment do
   desc "Migrate all tenants"
   task :migrate do
     warn_if_tenants_empty
+
     tenants.each do |tenant|
       begin
-        puts("Migrating #{tenant} tenant")
         Apartment::Migrator.migrate tenant
       rescue Apartment::TenantNotFound => e
         puts e.message
@@ -33,7 +32,6 @@ apartment_namespace = namespace :apartment do
 
     tenants.each do |tenant|
       begin
-        puts("Seeding #{tenant} tenant")
         Apartment::Tenant.switch(tenant) do
           Apartment::Tenant.seed
         end
@@ -51,7 +49,6 @@ apartment_namespace = namespace :apartment do
 
     tenants.each do |tenant|
       begin
-        puts("Rolling back #{tenant} tenant")
         Apartment::Migrator.rollback tenant, step
       rescue Apartment::TenantNotFound => e
         puts e.message
@@ -69,7 +66,6 @@ apartment_namespace = namespace :apartment do
 
       tenants.each do |tenant|
         begin
-          puts("Migrating #{tenant} tenant up")
           Apartment::Migrator.run :up, tenant, version
         rescue Apartment::TenantNotFound => e
           puts e.message
@@ -86,7 +82,6 @@ apartment_namespace = namespace :apartment do
 
       tenants.each do |tenant|
         begin
-          puts("Migrating #{tenant} tenant down")
           Apartment::Migrator.run :down, tenant, version
         rescue Apartment::TenantNotFound => e
           puts e.message

@@ -1,71 +1,37 @@
 require 'apartment/adapters/abstract_adapter'
 
 module Apartment
-  module Tenant
-
-    def self.mysql2_adapter(config)
-      Apartment.use_schemas ?
-        Adapters::Mysql2SchemaAdapter.new(config) :
-        Adapters::Mysql2Adapter.new(config)
-    end
-  end
-
   module Adapters
     class Mysql2Adapter < AbstractAdapter
+      def switch_tenant(config)
+        difference = current_difference_from(config)
 
-      def initialize(config)
-        super
-
-        @default_tenant = config[:database]
-      end
-
-    protected
-
-      def rescue_from
-        Mysql2::Error
-      end
-    end
-
-    class Mysql2SchemaAdapter < AbstractAdapter
-      def initialize(config)
-        super
-
-        @default_tenant = config[:database]
-        reset
-      end
-
-      #   Reset current tenant to the default_tenant
-      #
-      def reset
-        Apartment.connection.execute "use `#{default_tenant}`"
-      end
-
-    protected
-
-      #   Connect to new tenant
-      #
-      def connect_to_new(tenant)
-        return reset if tenant.nil?
-
-        Apartment.connection.execute "use `#{environmentify(tenant)}`"
-
-      rescue ActiveRecord::StatementInvalid => exception
-        Apartment::Tenant.reset
-        raise_connect_error!(tenant, exception)
-      end
-
-      def process_excluded_model(model)
-        model.constantize.tap do |klass|
-          # Ensure that if a schema *was* set, we override
-          table_name = klass.table_name.split('.', 2).last
-
-          klass.table_name = "#{default_tenant}.#{table_name}"
+        if difference[:host]
+          Apartment.connection_class.connection_handler.establish_connection(config)
+        else
+          simple_switch(config) if difference[:database]
         end
       end
 
-      def reset_on_connection_exception?
-        true
+      def create_tenant!(config)
+        Apartment.connection.create_database(config[:database], config)
       end
+
+      def simple_switch(config)
+        Apartment.connection.execute("use `#{config[:database]}`")
+      rescue ActiveRecord::StatementInvalid => exception
+        raise_connect_error!(config[:database], exception)
+      end
+
+      private
+        def database_exists?(database)
+          result = Apartment.connection.exec_query(<<-SQL).try(:first)
+            SELECT 1 AS `exists`
+            FROM INFORMATION_SCHEMA.SCHEMATA
+            WHERE SCHEMA_NAME = #{Apartment.connection.quote(database)}
+          SQL
+          result.present? && result['exists'] == 1
+        end
     end
   end
 end
