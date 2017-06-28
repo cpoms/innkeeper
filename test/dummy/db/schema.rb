@@ -14,5 +14,6 @@ ActiveRecord::Schema.define(version: 20170619120400) do
     t.string   "name"
     t.datetime "birthdate"
     t.string   "sex"
+    t.timestamps
   end
 end

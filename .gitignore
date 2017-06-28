@@ -6,10 +6,10 @@ pkg/*
 *.log
 .idea
 *.sw[pno]
-spec/config/databases.yml
-spec/dummy/config/database.yml
+test/databases.yml
+test/dummy/config/database.yml
 cookbooks
 tmp
-spec/dummy/db/*.sqlite3
+test/dummy/db/*.sqlite3
 .DS_Store
 test/debug.log

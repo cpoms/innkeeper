@@ -12,9 +12,6 @@ require "apartment"
 ActiveRecord::Base.logger = Logger.new(File.join(File.dirname(__FILE__), "debug.log"))
 
 require "active_support"
-require "database_rewinder"
-# DatabaseRewinder[ENV['DB'] || 'sqlite3']
-# DatabaseRewinder.clean_all
 require "apartment_test"
 require "erb"
 

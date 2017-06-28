@@ -28,6 +28,10 @@ module Apartment
         drop(tenants)
       end
 
+      Apartment.excluded_models.each do |excl|
+        excl.constantize.connection_specification_name = nil
+      end
+
       Apartment.connection_class.clear_all_connections!
       Apartment.reset
       Apartment::Tenant.reload!

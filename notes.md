@@ -26,3 +26,4 @@
 - finish config tests (tenant resolver specifically)
 - write multi-threading tests
 - remove deprecated silencers?
+- rewrite readme

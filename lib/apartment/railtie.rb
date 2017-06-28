@@ -5,11 +5,7 @@ require 'apartment/resolvers/database'
 module Apartment
   class Railtie < Rails::Railtie
 
-    #
-    #   Set up our default config options
-    #   Do this before the app initializers run so we don't override custom settings
-    #
-    config.before_initialize do
+    def self.prep
       Apartment.configure do |config|
         config.excluded_models = []
         config.force_reconnect_on_switch = false
@@ -20,6 +16,12 @@ module Apartment
 
       ActiveRecord::Migrator.migrations_paths = Rails.application.paths['db/migrate'].to_a
     end
+
+    #
+    #   Set up our default config options
+    #   Do this before the app initializers run so we don't override custom settings
+    #
+    config.before_initialize{ prep }
 
     #   Hook into ActionDispatch::Reloader to ensure Apartment is properly initialized
     #   Note that this doens't entirely work as expected in Development, because this is called before classes are reloaded
