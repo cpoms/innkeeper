@@ -27,3 +27,5 @@
 - write multi-threading tests
 - remove deprecated silencers?
 - rewrite readme
+
+- what happens when host is switched in pg without a database specified?

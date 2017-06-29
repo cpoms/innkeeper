@@ -5,13 +5,12 @@
 # require 'apartment/elevators/generic'
 # require 'apartment/elevators/domain'
 require 'apartment/elevators/subdomain'
-# require 'apartment/elevators/first_subdomain'
+# require 'apartment/resolvers/schema'
 
 #
 # Apartment Configuration
 #
 Apartment.configure do |config|
-
   # Add any models that you do not want to be multi-tenanted, but remain in the global (public) namespace.
   # A typical example would be a Customer or Tenant model that stores each Tenant's information.
   #
@@ -25,60 +24,46 @@ Apartment.configure do |config|
   #
   # config.tenant_names = lambda{ Customer.pluck(:tenant_name) }
   # config.tenant_names = ['tenant1', 'tenant2']
-  # config.tenant_names = {
-  #   'tenant1' => {
+  # config.tenant_names = [
+  #   {
   #     adapter: 'postgresql',
   #     host: 'some_server',
   #     port: 5555,
   #     database: 'postgres' # this is not the name of the tenant's db
   #                          # but the name of the database to connect to before creating the tenant's db
   #                          # mandatory in postgresql
+  #     schema_search_path: '"tenant1"'
   #   },
   #   'tenant2' => {
   #     adapter:  'postgresql',
   #     database: 'postgres' # this is not the name of the tenant's db
   #                          # but the name of the database to connect to before creating the tenant's db
   #                          # mandatory in postgresql
+  #     
   #   }
   # }
-  # config.tenant_names = lambda do
-  #   Tenant.all.each_with_object({}) do |tenant, hash|
-  #     hash[tenant.name] = tenant.db_configuration
-  #   end
-  # end
   #
   config.tenant_names = lambda { ToDo_Tenant_Or_User_Model.pluck :database }
 
+  # The tenant decorator setting should be a callable which receives the tenant
+  # as an argument, and returns the a modified version of the tenant name which
+  # you want to use in the resolver as a database or schema name, for example.
   #
-  # ==> PostgreSQL only options
+  # A typical use-case might be prepending or appending the rails environment,
+  # as shown below.
+  #
+  # config.tenant_decorator = ->(tenant){ "#{Rails.env}_#{tenant}" }
 
-  # Specifies whether to use PostgreSQL schemas or create a new database per Tenant.
-  # The default behaviour is true.
+  # The resolver is used to convert a tenant name into a full spec. The two
+  # provided resolvers are Database and Schema. When you issue
+  # Apartment.switch("some_tenant"){ ... }, Apartment passes "some_tenant" to
+  # the selected resolver (after it's been decorated). The Database resolver
+  # takes the decorated tenant name, and inserts it into the :database key of a
+  # full connection specification (the full spec is whatever the database spec
+  # was at Apartment initialization. The schema resolver, does the same but
+  # for the :schema_search_path option in the configuration.
   #
-  # config.use_schemas = true
-
-  # Apartment can be forced to use raw SQL dumps instead of schema.rb for creating new schemas.
-  # Use this when you are using some extra features in PostgreSQL that can't be respresented in
-  # schema.rb, like materialized views etc. (only applies with use_schemas set to true).
-  # (Note: this option doesn't use db/structure.sql, it creates SQL dump by executing pg_dump)
-  #
-  # config.use_sql = false
-
-  # There are cases where you might want some schemas to always be in your search_path
-  # e.g when using a PostgreSQL extension like hstore.
-  # Any schemas added here will be available along with your selected Tenant.
-  #
-  # config.persistent_schemas = %w{ hstore }
-
-  # <== PostgreSQL only options
-  #
-
-  # By default, and only when not using PostgreSQL schemas, Apartment will prepend the environment
-  # to the tenant name to ensure there is no conflict between your environments.
-  # This is mainly for the benefit of your development and test environments.
-  # Uncomment the line below if you want to disable this behaviour in production.
-  #
-  # config.prepend_environment = !Rails.env.production?
+  # config.tenant_resolver = Apartment::Resolvers::Schema
 end
 
 # Setup a custom Tenant switching middleware. The Proc should return the name of the Tenant that
@@ -89,4 +74,3 @@ end
 
 # Rails.application.config.middleware.use 'Apartment::Elevators::Domain'
 Rails.application.config.middleware.use 'Apartment::Elevators::Subdomain'
-# Rails.application.config.middleware.use 'Apartment::Elevators::FirstSubdomain'
