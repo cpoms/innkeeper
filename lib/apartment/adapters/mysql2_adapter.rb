@@ -1,4 +1,5 @@
 require 'apartment/adapters/abstract_adapter'
+require 'digest'
 
 module Apartment
   module Adapters
@@ -7,7 +8,7 @@ module Apartment
         difference = current_difference_from(config)
 
         if difference[:host]
-          Apartment.connection_class.connection_handler.establish_connection(config)
+          connection_switch!(config)
         else
           simple_switch(config) if difference[:database]
         end
@@ -21,6 +22,11 @@ module Apartment
         Apartment.connection.execute("use `#{config[:database]}`")
       rescue ActiveRecord::StatementInvalid => exception
         raise_connect_error!(config[:database], exception)
+      end
+
+      def connection_specification_name(config)
+        host_hash = Digest::MD5.hexdigest(config[:host] || config[:url] || "127.0.0.1")
+        "_apartment_#{host_hash}_#{config[:adapter]}".to_sym
       end
 
       private

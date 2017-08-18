@@ -26,16 +26,7 @@ module Apartment
       Thread.current[:apartment_adapter] ||= begin
         config = Apartment.default_tenant
 
-        adapter_name =
-          if defined?(JRUBY_VERSION)
-            if config[:adapter] =~ /mysql/
-              'jdbc_mysql_adapter'
-            elsif config[:adapter] =~ /postgresql/
-              'jdbc_postgresql_adapter'
-            end
-          else
-            "#{config[:adapter]}_adapter"
-          end
+        adapter_name = "#{config[:adapter]}_adapter"
 
         begin
           require "apartment/adapters/#{adapter_name}"

@@ -1,4 +1,5 @@
 require 'apartment/adapters/abstract_adapter'
+require 'digest'
 
 module Apartment
   module Adapters
@@ -11,6 +12,7 @@ module Apartment
       # -- END ABSTRACT OVERRIDES --
 
       def drop_database(tenant)
+        # Apartment.connection.select_all "select pg_terminate_backend(pg_stat_activity.pid) from pg_stat_activity where datname='#{tenant}' AND state='idle';"
         self.class.superclass.instance_method(:drop).bind(self).call(tenant)
       end
 
@@ -48,6 +50,8 @@ module Apartment
       end
 
       def simple_switch(config)
+        return unless config[:schema_search_path]
+
         tenant = first_schema(config[:schema_search_path])
 
         unless Apartment.connection.schema_exists?(tenant)
@@ -68,6 +72,11 @@ module Apartment
         if schema && !schema_exists?(schema)
           Apartment.connection.execute(%{CREATE SCHEMA "#{schema}"})
         end
+      end
+
+      def connection_specification_name(config)
+        host_hash = Digest::MD5.hexdigest(config[:host] || config[:url] || "127.0.0.1")
+        "_apartment_#{host_hash}_#{config[:adapter]}_#{config[:database]}".to_sym
       end
 
       private

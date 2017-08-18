@@ -5,7 +5,7 @@ class RailtieTest < Minitest::Test
   def test_railtie_does_not_hold_onto_connection
     Apartment.configure do |config|
       config.tenant_resolver = Apartment::Resolvers::Database
-      config.excluded_models = ["Company"]
+      config.excluded_models = %w(Company)
     end
 
     Apartment.connection_class.connection_pool.disconnect!
@@ -18,8 +18,6 @@ class RailtieTest < Minitest::Test
     after = Apartment.connection_class.connection_pool.stat.slice(:busy, :dead, :waiting)
 
     assert_equal before, after
-  ensure
-    Company.connection_specification_name = nil
   end
 
   def test_railtie_sets_default_configuration

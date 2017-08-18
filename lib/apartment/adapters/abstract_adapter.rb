@@ -122,7 +122,14 @@ module Apartment
           c.reject{ |k, _| without_keys.include?(k) }
         end
 
-        Apartment.connection_handler.establish_connection(config)
+        config.merge!(name: connection_specification_name(config))
+
+        unless Apartment.connection_handler.retrieve_connection_pool(config[:name])
+          Apartment.connection_handler.establish_connection(config)
+        end
+
+        Apartment.connection_class.connection_specification_name = config[:name]
+        simple_switch(config)
       end
 
       def import_database_schema
