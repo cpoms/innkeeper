@@ -1,27 +1,27 @@
 module SharedAdapterTests
   def test_switch
-    assert tenant_is(Apartment.default_tenant)
+    assert_tenant_is(Apartment.default_tenant)
 
     Apartment::Tenant.switch(@tenant1){
-      assert tenant_is(@tenant1)
+      assert_tenant_is(@tenant1)
     }
 
-    assert tenant_is(Apartment.default_tenant)
+    assert_tenant_is(Apartment.default_tenant)
   end
 
   def test_local_switch_doesnt_modify_connection
-    assert tenant_is(Apartment.default_tenant)
+    assert_tenant_is(Apartment.default_tenant)
 
     conn_id = Apartment.connection.object_id
 
     Apartment::Tenant.switch!(@tenant1)
 
-    assert tenant_is(@tenant1)
+    assert_tenant_is(@tenant1)
     assert_equal conn_id, Apartment.connection.object_id
   end
 
   def test_remote_switch_modifies_connection
-    assert tenant_is(Apartment.default_tenant)
+    assert_tenant_is(Apartment.default_tenant)
 
     conn_id = Apartment.connection.object_id
 
@@ -34,13 +34,13 @@ module SharedAdapterTests
   def test_force_reconnect
     Apartment.configure{ |config| config.force_reconnect_on_switch = true }
 
-    assert tenant_is(Apartment.default_tenant)
+    assert_tenant_is(Apartment.default_tenant)
 
     conn_id = Apartment.connection.object_id
 
     Apartment::Tenant.switch!(@tenant1)
 
-    assert tenant_is(@tenant1)
+    assert_tenant_is(@tenant1)
     refute_equal conn_id, Apartment.connection.object_id
   end
 
@@ -71,7 +71,7 @@ module SharedAdapterTests
 
     @adapter.reset
 
-    assert tenant_is(@tenant1)
+    assert_tenant_is(@tenant1)
   ensure
     Apartment.default_tenant = prev_default
   end

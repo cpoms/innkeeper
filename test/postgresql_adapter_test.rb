@@ -22,7 +22,7 @@ class PostgresqlAdapterTest < Apartment::Test
 
   #   @adapter.create("db_tenant")
 
-  #   assert tenant_is(Apartment.default_tenant)
+  #   assert_tenant_is(Apartment.default_tenant)
 
   #   conn_id = Apartment.connection.object_id
 
@@ -31,7 +31,7 @@ class PostgresqlAdapterTest < Apartment::Test
   #     assert_equal "db_tenant", Apartment.connection.current_database
   #   end
 
-  #   assert tenant_is(Apartment.default_tenant)
+  #   assert_tenant_is(Apartment.default_tenant)
   # ensure
   #   @adapter.drop_database("db_tenant")
   #   Apartment.tenant_resolver = Apartment::Resolvers::Schema

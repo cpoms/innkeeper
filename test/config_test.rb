@@ -1,6 +1,10 @@
 require_relative 'test_helper'
 
 class ConfigTest < Minitest::Test
+  def teardown
+    Apartment.reset
+  end
+
   def test_configure_yields_apartment
     Apartment.configure{ |config| assert_equal Apartment, config }
   end

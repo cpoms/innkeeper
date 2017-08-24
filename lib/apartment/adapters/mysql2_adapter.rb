@@ -25,8 +25,12 @@ module Apartment
       end
 
       def connection_specification_name(config)
-        host_hash = Digest::MD5.hexdigest(config[:host] || config[:url] || "127.0.0.1")
-        "_apartment_#{host_hash}_#{config[:adapter]}".to_sym
+        if Apartment.pool_per_config
+          "_apartment_#{config.hash}".to_sym
+        else
+          host_hash = Digest::MD5.hexdigest(config[:host] || config[:url] || "127.0.0.1")
+          "_apartment_#{host_hash}_#{config[:adapter]}".to_sym
+        end
       end
 
       private

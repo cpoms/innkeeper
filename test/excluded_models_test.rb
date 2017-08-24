@@ -19,8 +19,8 @@ class ExcludedModelsTest < Apartment::Test
     assert_equal :_apartment_excluded, Company.connection_specification_name
 
     Apartment::Tenant.switch(@tenant1) do
-      assert tenant_is(@tenant1)
-      assert tenant_is(Apartment.default_tenant, for_model: Company)
+      assert_tenant_is(@tenant1)
+      assert_tenant_is(Apartment.default_tenant, for_model: Company)
     end
   end
 

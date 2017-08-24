@@ -26,9 +26,9 @@ module Apartment
           connection_switch!(config)
         end
 
-        schema = first_schema(config[:schema_search_path])
+        schema = first_schema(config[:schema_search_path]) if config[:schema_search_path]
 
-        Apartment.connection.execute(%{DROP SCHEMA "#{schema}" CASCADE})
+        Apartment.connection.execute(%{DROP SCHEMA "#{schema}" CASCADE}) if schema
 
         @current = tenant
       rescue ActiveRecord::StatementInvalid => exception
@@ -67,7 +67,7 @@ module Apartment
           connection_switch!(config, without_keys: [:schema_search_path])
         end
 
-        schema = first_schema(config[:schema_search_path])
+        schema = first_schema(config[:schema_search_path]) if config[:schema_search_path]
 
         if schema && !schema_exists?(schema)
           Apartment.connection.execute(%{CREATE SCHEMA "#{schema}"})
@@ -75,8 +75,12 @@ module Apartment
       end
 
       def connection_specification_name(config)
-        host_hash = Digest::MD5.hexdigest(config[:host] || config[:url] || "127.0.0.1")
-        "_apartment_#{host_hash}_#{config[:adapter]}_#{config[:database]}".to_sym
+        if Apartment.pool_per_config
+          "_apartment_#{config.hash}".to_sym
+        else
+          host_hash = Digest::MD5.hexdigest(config[:host] || config[:url] || "127.0.0.1")
+          "_apartment_#{host_hash}_#{config[:adapter]}_#{config[:database]}".to_sym
+        end
       end
 
       private

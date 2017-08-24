@@ -112,6 +112,20 @@ module Apartment
         end
       end
 
+      def setup_connection_specification_name
+        Apartment.connection_class.connection_specification_name = nil
+        Apartment.connection_class.instance_eval do
+          def connection_specification_name
+            if !defined?(@connection_specification_name) || @connection_specification_name.nil?
+              apartment_spec_name = Thread.current[:_apartment_connection_specification_name]
+              return apartment_spec_name ||
+                (self == ActiveRecord::Base ? "primary" : superclass.connection_specification_name)
+            end
+            @connection_specification_name
+          end
+        end
+      end
+
       def current_difference_from(config)
         current_config = config_for(@current)
         config.select{ |k, v| current_config[k] != v }
@@ -128,7 +142,7 @@ module Apartment
           Apartment.connection_handler.establish_connection(config)
         end
 
-        Apartment.connection_class.connection_specification_name = config[:name]
+        Thread.current[:_apartment_connection_specification_name] = config[:name]
         simple_switch(config)
       end
 

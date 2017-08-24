@@ -10,7 +10,7 @@ module Apartment
 
     ACCESSOR_METHODS = [
       :use_sql, :seed_after_create, :tenant_decorator,
-      :force_reconnect_on_switch
+      :force_reconnect_on_switch, :pool_per_config
     ]
     WRITER_METHODS   = [
       :tenant_names, :database_schema_file, :excluded_models,
@@ -87,6 +87,8 @@ module Apartment
       (ACCESSOR_METHODS + WRITER_METHODS + OTHER_METHODS).each do |method|
         remove_instance_variable(:"@#{method}") if instance_variable_defined?(:"@#{method}")
       end
+
+      Thread.current[:_apartment_connection_specification_name] = nil
     end
   end
 

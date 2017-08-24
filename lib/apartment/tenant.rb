@@ -15,6 +15,7 @@ module Apartment
     #   Initialize Apartment config options such as excluded_models
     #
     def init
+      adapter.setup_connection_specification_name
       adapter.process_excluded_models
     end
 
