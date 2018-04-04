@@ -18,17 +18,19 @@ class MultithreadingTest < Apartment::Test
   def test_thread_safety_of_switching
     assert_tenant_is(Apartment.default_tenant)
 
-    thread = Thread.new do
-      Apartment::Tenant.switch!(@tenant1)
+    threads = []
+    100.times do
+      threads << Thread.new do
+        db = [@tenant1, @tenant2].sample
+        Apartment::Tenant.switch!(db)
 
-      assert_tenant_is(@tenant1)
+        assert_tenant_is(db)
 
-      # it's necessary to check connections back in from threads, else
-      # you'll leak connections.
-      Apartment.connection_class.clear_active_connections!
+        Apartment.connection_class.clear_active_connections!
+      end
     end
 
-    thread.join
+    threads.each(&:join)
 
     assert_tenant_is(Apartment.default_tenant)
   end
