@@ -8,6 +8,8 @@ module Apartment
 
       def initialize
         reset
+      rescue Apartment::TenantNotFound
+        puts "WARN: Unable to connect to default tenant"
       end
 
       def reset
