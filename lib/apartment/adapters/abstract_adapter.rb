@@ -134,9 +134,7 @@ module Apartment
       end
 
       def connection_switch!(config, without_keys: [])
-        config = config.dup.tap do |c|
-          c.reject{ |k, _| without_keys.include?(k) }
-        end
+        config = config.reject{ |k, _| without_keys.include?(k) }
 
         config.merge!(name: connection_specification_name(config))
 
@@ -145,7 +143,7 @@ module Apartment
         end
 
         Thread.current[:_apartment_connection_specification_name] = config[:name]
-        simple_switch(config)
+        simple_switch(config) if config[:database] || config[:schema_search_path]
       end
 
       def import_database_schema
