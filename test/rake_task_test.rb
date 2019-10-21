@@ -1,15 +1,15 @@
 require_relative 'test_helper'
-require 'apartment/resolvers/database'
+require 'innkeeper/resolvers/database'
 require 'rake'
 
-class RakeTaskTest < Apartment::Test
+class RakeTaskTest < Innkeeper::Test
   def setup
     setup_connection("mysql")
 
-    Apartment.configure do |config|
+    Innkeeper.configure do |config|
       config.excluded_models = ["Company"]
       config.tenant_names = lambda{ Company.pluck(:database) }
-      config.tenant_resolver = Apartment::Resolvers::Database
+      config.tenant_resolver = Innkeeper::Resolvers::Database
     end
 
     super
@@ -38,20 +38,20 @@ class RakeTaskTest < Apartment::Test
   end
 
   def test_all_databases_get_migrated
-    assert_received(Apartment::Migrator, :migrate, @tenants.size) do
-      @rake['apartment:migrate'].invoke
+    assert_received(Innkeeper::Migrator, :migrate, @tenants.size) do
+      @rake['innkeeper:migrate'].invoke
     end
   end
 
   def test_all_databases_get_rolled_back
-    assert_received(Apartment::Migrator, :rollback, @tenants.size) do
-      @rake['apartment:rollback'].invoke
+    assert_received(Innkeeper::Migrator, :rollback, @tenants.size) do
+      @rake['innkeeper:rollback'].invoke
     end
   end
 
   def test_all_databases_get_seeded
-    assert_received(Apartment::Tenant, :seed, @tenants.size) do
-      @rake['apartment:seed'].invoke
+    assert_received(Innkeeper::Tenant, :seed, @tenants.size) do
+      @rake['innkeeper:seed'].invoke
     end
   end
 end

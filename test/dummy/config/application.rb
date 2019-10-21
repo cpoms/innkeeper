@@ -7,17 +7,17 @@ require "action_view/railtie"
 require "action_mailer/railtie"
 
 Bundler.require
-require "apartment"
+require "innkeeper"
 
 module Dummy
   class Application < Rails::Application
     # Settings in config/environments/* take precedence over those specified here.
     # Application configuration should go into files in config/initializers
     # -- all .rb files in that directory are automatically loaded.
-    require 'apartment/elevators/subdomain'
-    require 'apartment/elevators/domain'
+    require 'innkeeper/elevators/subdomain'
+    require 'innkeeper/elevators/domain'
 
-    config.middleware.use Apartment::Elevators::Subdomain
+    config.middleware.use Innkeeper::Elevators::Subdomain
 
     # Custom directories with classes and modules you want to be autoloadable.
     config.autoload_paths += %W(#{config.root}/lib)

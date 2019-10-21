@@ -1,12 +1,12 @@
 require_relative 'test_helper'
-require 'apartment/resolvers/database'
+require 'innkeeper/resolvers/database'
 
-class DecoratorTest < Apartment::Test
+class DecoratorTest < Innkeeper::Test
   def setup
     setup_connection("mysql")
 
-    Apartment.configure do |config|
-      config.tenant_resolver = Apartment::Resolvers::Database
+    Innkeeper.configure do |config|
+      config.tenant_resolver = Innkeeper::Resolvers::Database
       config.tenant_decorator = ->(tenant){ "#{Rails.env}_#{tenant}" }
     end
 
@@ -14,7 +14,7 @@ class DecoratorTest < Apartment::Test
   end
 
   def test_decorator_proc
-    decorated = Apartment::Tenant.adapter.decorate("foobar")
+    decorated = Innkeeper::Tenant.adapter.decorate("foobar")
 
     assert_equal "test_foobar", decorated
   end

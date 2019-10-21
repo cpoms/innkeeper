@@ -1,16 +1,16 @@
 require_relative 'test_helper'
-require 'apartment/resolvers/schema'
-require 'apartment/resolvers/database'
+require 'innkeeper/resolvers/schema'
+require 'innkeeper/resolvers/database'
 require_relative 'shared/shared_adapter_tests'
 
-class PostgresqlAdapterTest < Apartment::Test
+class PostgresqlAdapterTest < Innkeeper::Test
   include SharedAdapterTests
 
   def setup
     setup_connection("postgresql")
 
-    Apartment.configure do |config|
-      config.tenant_resolver = Apartment::Resolvers::Schema
+    Innkeeper.configure do |config|
+      config.tenant_resolver = Innkeeper::Resolvers::Schema
     end
 
     super
@@ -18,22 +18,22 @@ class PostgresqlAdapterTest < Apartment::Test
 
   # idk why it broked :'(
   # def test_postgres_database_resolver_reconnects
-  #   Apartment.tenant_resolver = Apartment::Resolvers::Database
+  #   Innkeeper.tenant_resolver = Innkeeper::Resolvers::Database
 
   #   @adapter.create("db_tenant")
 
-  #   assert_tenant_is(Apartment.default_tenant)
+  #   assert_tenant_is(Innkeeper.default_tenant)
 
-  #   conn_id = Apartment.connection.object_id
+  #   conn_id = Innkeeper.connection.object_id
 
-  #   Apartment::Tenant.switch("db_tenant") do
-  #     refute_equal conn_id, Apartment.connection.object_id
-  #     assert_equal "db_tenant", Apartment.connection.current_database
+  #   Innkeeper::Tenant.switch("db_tenant") do
+  #     refute_equal conn_id, Innkeeper.connection.object_id
+  #     assert_equal "db_tenant", Innkeeper.connection.current_database
   #   end
 
-  #   assert_tenant_is(Apartment.default_tenant)
+  #   assert_tenant_is(Innkeeper.default_tenant)
   # ensure
   #   @adapter.drop_database("db_tenant")
-  #   Apartment.tenant_resolver = Apartment::Resolvers::Schema
+  #   Innkeeper.tenant_resolver = Innkeeper::Resolvers::Schema
   # end
 end

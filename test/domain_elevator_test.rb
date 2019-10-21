@@ -1,12 +1,12 @@
 require_relative 'test_helper'
 require_relative 'mocks/adapter_mock'
-require 'apartment/elevators/domain'
+require 'innkeeper/elevators/domain'
 
 class DomainElevatorTest < Minitest::Test
   include AdapterMock
 
   def setup
-    @elevator = Apartment::Elevators::Domain.new(Proc.new{})
+    @elevator = Innkeeper::Elevators::Domain.new(Proc.new{})
 
     super
   end

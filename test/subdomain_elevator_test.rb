@@ -1,12 +1,12 @@
 require_relative 'test_helper'
 require_relative 'mocks/adapter_mock'
-require 'apartment/elevators/host_hash'
+require 'innkeeper/elevators/host_hash'
 
 class SubdomainElevatorTest < Minitest::Test
   include AdapterMock
 
   def setup
-    @elevator = Apartment::Elevators::Subdomain.new(Proc.new{})
+    @elevator = Innkeeper::Elevators::Subdomain.new(Proc.new{})
 
     super
   end
@@ -62,7 +62,7 @@ class SubdomainElevatorTest < Minitest::Test
   end
 
   def test_excluded_subdomain_ignored
-    Apartment::Elevators::Subdomain.excluded_subdomains = %w{foo}
+    Innkeeper::Elevators::Subdomain.excluded_subdomains = %w{foo}
 
     with_adapter_mocked do |adapter|
       @elevator.call('HTTP_HOST' => 'foo.bar.com')
@@ -70,6 +70,6 @@ class SubdomainElevatorTest < Minitest::Test
       assert adapter.verify
     end
   ensure
-    Apartment::Elevators::Subdomain.excluded_subdomains = nil
+    Innkeeper::Elevators::Subdomain.excluded_subdomains = nil
   end
 end

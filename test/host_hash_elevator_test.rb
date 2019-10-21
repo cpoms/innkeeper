@@ -1,12 +1,12 @@
 require_relative 'test_helper'
 require_relative 'mocks/adapter_mock'
-require 'apartment/elevators/host_hash'
+require 'innkeeper/elevators/host_hash'
 
 class HostHashElevatorTest < Minitest::Test
   include AdapterMock
 
   def setup
-    @elevator = Apartment::Elevators::HostHash.new(Proc.new{}, 'example.com' => 'example_tenant')
+    @elevator = Innkeeper::Elevators::HostHash.new(Proc.new{}, 'example.com' => 'example_tenant')
 
     super
   end
@@ -18,14 +18,14 @@ class HostHashElevatorTest < Minitest::Test
 
   def test_raises_exception_if_no_host
     request = ActionDispatch::Request.new('HTTP_HOST' => '')
-    assert_raises Apartment::TenantNotFound do
+    assert_raises Innkeeper::TenantNotFound do
       @elevator.parse_tenant_name(request)
     end
   end
 
   def test_raises_exception_if_host_not_found
     request = ActionDispatch::Request.new('HTTP_HOST' => 'example2.com')
-    assert_raises Apartment::TenantNotFound do
+    assert_raises Innkeeper::TenantNotFound do
       @elevator.parse_tenant_name(request)
     end
   end

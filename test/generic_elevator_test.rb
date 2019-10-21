@@ -1,24 +1,24 @@
 require_relative 'test_helper'
 require_relative 'mocks/adapter_mock'
-require 'apartment/elevators/generic'
+require 'innkeeper/elevators/generic'
 
 class GenericElevatorTest < Minitest::Test
   include AdapterMock
 
-  class MyElevator < Apartment::Elevators::Generic
+  class MyElevator < Innkeeper::Elevators::Generic
     def parse_tenant_name(*)
       'tenant2'
     end
   end
 
   def setup
-    @elevator = Apartment::Elevators::Generic.new(Proc.new{})
+    @elevator = Innkeeper::Elevators::Generic.new(Proc.new{})
 
     super
   end
 
   def test_processor_is_called_if_given
-    elevator = Apartment::Elevators::Generic.new(Proc.new{}, Proc.new{'tenant1'})
+    elevator = Innkeeper::Elevators::Generic.new(Proc.new{}, Proc.new{'tenant1'})
 
     with_adapter_mocked do |adapter|
       adapter.expect :switch, true, ['tenant1']

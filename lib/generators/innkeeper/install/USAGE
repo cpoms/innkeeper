@@ -1,0 +1,5 @@
+Description:
+  Creates an initializer for innkeeper.
+
+Example:
+  `rails generate innkeeper:install`

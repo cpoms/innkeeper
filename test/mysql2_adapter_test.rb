@@ -1,15 +1,15 @@
 require_relative 'test_helper'
-require 'apartment/resolvers/database'
+require 'innkeeper/resolvers/database'
 require_relative 'shared/shared_adapter_tests'
 
-class Mysql2AdapterTest < Apartment::Test
+class Mysql2AdapterTest < Innkeeper::Test
   include SharedAdapterTests
 
   def setup
     setup_connection("mysql")
 
-    Apartment.configure do |config|
-      config.tenant_resolver = Apartment::Resolvers::Database
+    Innkeeper.configure do |config|
+      config.tenant_resolver = Innkeeper::Resolvers::Database
     end
 
     super

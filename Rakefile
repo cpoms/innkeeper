@@ -16,7 +16,7 @@ require 'appraisal'
 
 task :console do
   require 'pry'
-  require 'apartment'
+  require 'innkeeper'
   ARGV.clear
   Pry.start
 end
@@ -31,10 +31,10 @@ namespace :db do
   desc "copy sample database credential files over if real files don't exist"
   task :copy_credentials do
     require 'fileutils'
-    apartment_db_file = 'test/databases.yml'
+    innkeeper_db_file = 'test/databases.yml'
     rails_db_file = 'test/dummy/config/database.yml'
 
-    FileUtils.copy(apartment_db_file + '.sample', apartment_db_file, :verbose => true) unless File.exists?(apartment_db_file)
+    FileUtils.copy(innkeeper_db_file + '.sample', innkeeper_db_file, :verbose => true) unless File.exists?(innkeeper_db_file)
     FileUtils.copy(rails_db_file + '.sample', rails_db_file, :verbose => true)         unless File.exists?(rails_db_file)
   end
 end

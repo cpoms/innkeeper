@@ -1,12 +1,12 @@
 require_relative 'test_helper'
-require 'apartment/resolvers/database'
+require 'innkeeper/resolvers/database'
 
-class ExcludedModelsTest < Apartment::Test
+class ExcludedModelsTest < Innkeeper::Test
   def setup
     setup_connection("mysql")
 
-    Apartment.configure do |config|
-      config.tenant_resolver = Apartment::Resolvers::Database
+    Innkeeper.configure do |config|
+      config.tenant_resolver = Innkeeper::Resolvers::Database
       config.excluded_models = %w(Company User)
     end
 
@@ -14,18 +14,18 @@ class ExcludedModelsTest < Apartment::Test
   end
 
   def test_model_exclusions
-    Apartment::Tenant.adapter.process_excluded_models
+    Innkeeper::Tenant.adapter.process_excluded_models
 
-    assert_equal :_apartment_excluded, Company.connection_specification_name
+    assert_equal :_innkeeper_excluded, Company.connection_specification_name
 
-    Apartment::Tenant.switch(@tenant1) do
+    Innkeeper::Tenant.switch(@tenant1) do
       assert_tenant_is(@tenant1)
-      assert_tenant_is(Apartment.default_tenant, for_model: Company)
+      assert_tenant_is(Innkeeper.default_tenant, for_model: Company)
     end
   end
 
   def test_all_excluded_models_use_same_connection_pool
-    Apartment::Tenant.adapter.process_excluded_models
+    Innkeeper::Tenant.adapter.process_excluded_models
 
     assert_equal Company.connection_pool, User.connection_pool
   end

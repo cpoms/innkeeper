@@ -1,13 +1,13 @@
-# Apartment
+# Innkeeper
 
-[![Code Climate](https://codeclimate.com/github/influitive/apartment.png)](https://codeclimate.com/github/influitive/apartment)
-[![Build Status](https://secure.travis-ci.org/influitive/apartment.png?branch=development)](http://travis-ci.org/influitive/apartment)
+[![Code Climate](https://codeclimate.com/github/cpoms/innkeeper.png)](https://codeclimate.com/github/cpoms/innkeeper)
+[![Build Status](https://secure.travis-ci.org/cpoms/innkeeper.png?branch=development)](http://travis-ci.org/cpoms/innkeeper)
 
 *Multitenancy for Rails and ActiveRecord*
 
-Apartment provides tools to help you deal with multiple tenants in your Rails
+Innkeeper provides tools to help you deal with multiple tenants in your Rails
 application. If you need to have certain data sequestered based on account or
-company, but still allow some data to exist in a common tenant, Apartment can
+company, but still allow some data to exist in a common tenant, Innkeeper can
 help.
 
 ## Installation
@@ -17,19 +17,19 @@ help.
 Add the following to your Gemfile:
 
 ```ruby
-gem 'apartment'
+gem 'innkeeper'
 ```
 
-Then generate your `Apartment` config file using
+Then generate your `Innkeeper` config file using
 
 ```ruby
-bundle exec rails generate apartment:install
+bundle exec rails generate innkeeper:install
 ```
 
-This will create a `config/initializers/apartment.rb` initializer file.
+This will create a `config/initializers/innkeeper.rb` initializer file.
 Configure as needed using the docs below.
 
-That's all you need to set up the Apartment libraries. If you want to switch
+That's all you need to set up the Innkeeper libraries. If you want to switch
 tenants on a per-user basis, look under "Usage - Switching tenants per request",
 below.
 
@@ -37,11 +37,11 @@ below.
 
 ### Creating new Tenants
 
-Before you can switch to a new apartment tenant, you will need to create it.
+Before you can switch to a new innkeeper tenant, you will need to create it.
 Whenever you need to create a new tenant, you can run the following command:
 
 ```ruby
-Apartment::Tenant.create('tenant_name')
+Innkeeper::Tenant.create('tenant_name')
 ```
 
 If you're using PostgreSQL, this will create the database and schema from the
@@ -55,10 +55,10 @@ be up to date when create returns.
 
 ### Switching Tenants
 
-To switch tenants using Apartment, use the following command:
+To switch tenants using Innkeeper, use the following command:
 
 ```ruby
-Apartment::Tenant.switch!('tenant_name')
+Innkeeper::Tenant.switch!('tenant_name')
 ```
 
 When switch is called, all requests coming to ActiveRecord will be routed to the
@@ -67,8 +67,8 @@ to the 'root' tenant, call switch with no arguments.
 
 ### Switching Tenants per request
 
-You can have Apartment route to the appropriate tenant by adding some Rack
-middleware. Apartment can support many different "Elevators" that can take care
+You can have Innkeeper route to the appropriate tenant by adding some Rack
+middleware. Innkeeper can support many different "Elevators" that can take care
 of this routing to your data.
 
 **NOTE: when switching tenants per-request, keep in mind that the order of your
@@ -76,14 +76,14 @@ Rack middleware is important.** See the
 [Middleware Considerations](#middleware-considerations) section for more.
 
 The initializer above will generate the appropriate code for the Subdomain
-elevator by default. You can see this in `config/initializers/apartment.rb`
+elevator by default. You can see this in `config/initializers/innkeeper.rb`
 after running that generator. If you're *not* using the generator, you can
 specify your elevator below. Note that in this case you will **need** to require
 the elevator manually in your `application.rb` like so:
 
 ```ruby
 # config/application.rb
-require 'apartment/elevators/subdomain' # or 'domain' or 'generic'
+require 'innkeeper/elevators/subdomain' # or 'domain' or 'generic'
 ```
 
 #### Switch on subdomain
@@ -96,7 +96,7 @@ so:
 # application.rb
 module MyApplication
   class Application < Rails::Application
-    config.middleware.use 'Apartment::Elevators::Subdomain'
+    config.middleware.use 'Innkeeper::Elevators::Subdomain'
   end
 end
 ```
@@ -106,11 +106,11 @@ to treat www like a subdomain, in an initializer in your application, you can
 set the following:
 
 ```ruby
-# config/initializers/apartment/subdomain_exclusions.rb
-Apartment::Elevators::Subdomain.excluded_subdomains = ['www']
+# config/initializers/innkeeper/subdomain_exclusions.rb
+Innkeeper::Elevators::Subdomain.excluded_subdomains = ['www']
 ```
 
-This functions much in the same way as Apartment.excluded_models. This example
+This functions much in the same way as Innkeeper.excluded_models. This example
 will prevent switching your tenant when the subdomain is www. Handy for
 subdomains like: "public", "www", and "admin" :)
 
@@ -123,7 +123,7 @@ domains *ie '.com'* ) use the following:
 # application.rb
 module MyApplication
   class Application < Rails::Application
-    config.middleware.use 'Apartment::Elevators::Domain'
+    config.middleware.use 'Innkeeper::Elevators::Domain'
   end
 end
 ```
@@ -137,7 +137,7 @@ the following:
 # application.rb
 module MyApplication
   class Application < Rails::Application
-    config.middleware.use 'Apartment::Elevators::HostHash', {'example.com' => 'example_tenant'}
+    config.middleware.use 'Innkeeper::Elevators::HostHash', {'example.com' => 'example_tenant'}
   end
 end
 ```
@@ -146,7 +146,7 @@ end
 
 A Generic Elevator exists that allows you to pass a `Proc` (or anything that
 responds to `call`) to the middleware. This Object will be passed in an
-`ActionDispatch::Request` object when called for you to do your magic. Apartment
+`ActionDispatch::Request` object when called for you to do your magic. Innkeeper
 will use the return value of this proc to switch to the appropriate tenant. Use
 like so:
 
@@ -155,7 +155,7 @@ like so:
 module MyApplication
   class Application < Rails::Application
     # Obviously not a contrived example
-    config.middleware.use 'Apartment::Elevators::Generic', Proc.new { |request| request.host.reverse }
+    config.middleware.use 'Innkeeper::Elevators::Generic', Proc.new { |request| request.host.reverse }
   end
 end
 ```
@@ -169,7 +169,7 @@ based on the request being made. It *could* look something like this:
 
 ```ruby
 # app/middleware/my_custom_elevator.rb
-class MyCustomElevator < Apartment::Elevators::Generic
+class MyCustomElevator < Innkeeper::Elevators::Generic
 
   # @return {String} - The tenant to switch to
   def parse_tenant_name(request)
@@ -185,20 +185,20 @@ end
 
 #### Middleware Considerations
 
-In the examples above, we show the Apartment middleware being appended to the
+In the examples above, we show the Innkeeper middleware being appended to the
 Rack stack with
 
 ```ruby
-Rails.application.config.middleware.use 'Apartment::Elevators::Subdomain'
+Rails.application.config.middleware.use 'Innkeeper::Elevators::Subdomain'
 ```
 
 By default, the Subdomain middleware switches into a Tenant based on the
 subdomain at the beginning of the request, and when the request is finished, it
 switches back to the "public" Tenant. This happens in the
-[Generic](https://github.com/influitive/apartment/blob/development/lib/apartment/elevators/generic.rb#L22)
+[Generic](https://github.com/cpoms/innkeeper/blob/development/lib/innkeeper/elevators/generic.rb#L22)
 elevator, so all elevators that inherit from this elevator will operate as such.
 
-It's also good to note that Apartment switches back to the "public" tenant any
+It's also good to note that Innkeeper switches back to the "public" tenant any
 time an error is raised in your application.
 
 This works okay for simple applications, but it's important to consider that you
@@ -206,29 +206,29 @@ may want to maintain the "selected" tenant through different parts of the Rack
 application stack. For example, the
 [Devise](https://github.com/plataformatec/devise) gem adds the `Warden::Manager`
 middleware at the end of the stack in the examples above, our
-`Apartment::Elevators::Subdomain` middleware would come after it. Trouble is,
-Apartment resets the selected tenant after the request is finish, so some 
+`Innkeeper::Elevators::Subdomain` middleware would come after it. Trouble is,
+Innkeeper resets the selected tenant after the request is finish, so some 
 edirects (e.g. authentication) in Devise will be run in the context of the
 "public" tenant. The same issue would also effect a gem such as the
 [better_errors](https://github.com/charliesome/better_errors) gem which inserts
 a middleware quite early in the Rails middleware stack.
 
-To resolve this issue, consider adding the Apartment middleware at a location
+To resolve this issue, consider adding the Innkeeper middleware at a location
 in the Rack stack that makes sense for your needs, e.g.:
 
 ```ruby
-Rails.application.config.middleware.insert_before 'Warden::Manager', 'Apartment::Elevators::Subdomain'
+Rails.application.config.middleware.insert_before 'Warden::Manager', 'Innkeeper::Elevators::Subdomain'
 ```
 
 Now work done in the Warden middleware is wrapped in the
-`Apartment::Tenant.switch` context started in the Generic elevator.
+`Innkeeper::Tenant.switch` context started in the Generic elevator.
 
 ### Dropping Tenants
 
-To drop tenants using Apartment, use the following command:
+To drop tenants using Innkeeper, use the following command:
 
 ```ruby
-Apartment::Tenant.drop('tenant_name')
+Innkeeper::Tenant.drop('tenant_name')
 ```
 
 When method is called, the schema is dropped and all data from itself will be
@@ -238,12 +238,12 @@ lost. Be careful with this method.
 
 The following config options should be set up in a Rails initializer such as:
 
-    config/initializers/apartment.rb
+    config/initializers/innkeeper.rb
 
 To set config options, add this to your initializer:
 
 ```ruby
-Apartment.configure do |config|
+Innkeeper.configure do |config|
   # set your options (described below) here
 end
 ```
@@ -251,7 +251,7 @@ end
 ### Excluding models
 
 If you have some models that should always access the 'public' tenant, you can
-specify this by configuring Apartment using `Apartment.configure`. This will
+specify this by configuring Innkeeper using `Innkeeper.configure`. This will
 yield a config object for you. You can set excluded models like so:
 
 ```ruby
@@ -285,12 +285,12 @@ config.default_schema = "some_other_schema"
 ```
 
 With that set, all excluded models will use this schema as the table name prefix
-instead of `public` and `reset` on `Apartment::Tenant` will return to this
+instead of `public` and `reset` on `Innkeeper::Tenant` will return to this
 schema as well.
 
 ## Persistent Schemas
 
-Apartment will normally just switch the `schema_search_path` whole hog to the
+Innkeeper will normally just switch the `schema_search_path` whole hog to the
 one passed in. This can lead to problems if you want other schemas to always be
 searched as well. Enter `persistent_schemas`. You can configure a list of other
 schemas that will always remain in the search path, while the default gets
@@ -314,7 +314,7 @@ When using extensions, keep in mind:
   to install it into a schema that is always available in the
   `schema_search_path`
 * The schema and extension need to be created in the database *before* they are
-  referenced in migrations, database.yml or apartment.
+  referenced in migrations, database.yml or innkeeper.
 * There does not seem to be a way to create the schema and extension using
   standard rails migrations.
 * Rails db:test:prepare deletes and recreates the database, so it needs to be
@@ -359,8 +359,8 @@ end
 #### 2. Ensure the schema is in Rails' default connection
 
 Next, your `database.yml` file must mimic what you've set for your default and
-persistent schemas in Apartment. When you run migrations with Rails, it won't
-know about the extensions schema because Apartment isn't injected into the
+persistent schemas in Innkeeper. When you run migrations with Rails, it won't
+know about the extensions schema because Innkeeper isn't injected into the
 default connection, it's done on a per-request basis, therefore Rails doesn't
 know about `hstore` or `uuid-ossp` during migrations.  To do so, add the
 following to your `database.yml` for all environments
@@ -376,10 +376,10 @@ schema_search_path: "public,shared_extensions"
 This would be for a config with `default_schema` set to `public` and
 `persistent_schemas` set to `['shared_extensions']`.
 
-#### 3. Ensure the schema is in the apartment config
+#### 3. Ensure the schema is in the innkeeper config
 
 ```ruby
-# config/initializers/apartment.rb
+# config/initializers/innkeeper.rb
 ...
 config.persistent_schemas = ['shared_extensions']
 ...
@@ -392,7 +392,7 @@ add it into the postgresql template1 database so that every tenant that gets
 created has it by default.
 
 One caveat with this approach is that it can interfere with other projects in
-development using the same extensions and template, but not using apartment with
+development using the same extensions and template, but not using innkeeper with
 this approach.
 
 You can do so using a command like so:
@@ -411,7 +411,7 @@ the matter.
 ### Managing Migrations
 
 In order to migrate all of your tenants (or postgresql schemas) you need to
-provide a list of dbs to Apartment. You can make this dynamic by providing a
+provide a list of dbs to Innkeeper. You can make this dynamic by providing a
 Proc object to be called on migrations. This object should yield an array of
 string representing each tenant name. Example:
 
@@ -429,12 +429,12 @@ You can then migrate your tenants using the normal rake task:
 rake db:migrate
 ```
 
-This just invokes `Apartment::Tenant.migrate(#{tenant_name})` for each tenant
-name supplied from `Apartment.tenant_names`.
+This just invokes `Innkeeper::Tenant.migrate(#{tenant_name})` for each tenant
+name supplied from `Innkeeper.tenant_names`.
 
 #### Parallel Migrations
 
-Apartment supports parallelizing migrations into multiple threads when
+Innkeeper supports parallelizing migrations into multiple threads when
 you have a large number of tenants. By default, parallel migrations is
 turned off. You can enable this by setting `parallel_migration_threads` to 
 the number of threads you want to use in your initializer.
@@ -445,14 +445,14 @@ that Rails will use to connect to your database.
 
 ## Tenants on different servers
 
-Apartment supports tenant-based sharding at the application level. The `switch`,
+Innkeeper supports tenant-based sharding at the application level. The `switch`,
 `create`, and `drop` methods all support full database configurations (as a
 hash) as well as tenant names. In fact, even when you pass a tenant name, it
 gets resolved to a full configuration using the configured `tenant_resolver`. If
 you wish to switch to a tenant on a different host, you can pass the full config
 with the host key.
 
-Apartment will compare the config to it's current one and work out whether it
+Innkeeper will compare the config to it's current one and work out whether it
 needs to switch host, database, schema, etc, and only do the minimal switch. For
 tenants (databases for mysql, schemas for pg) on the same host, the switch will
 be a lightweight 'local' switch, which is one that occurs as a SQL query only,
@@ -464,7 +464,7 @@ name, or something similar, and divide the hash space across available hosts.
 
 ## Sidekiq
 
-See [apartment-sidekiq](https://github.com/influitive/apartment-sidekiq)
+See [innkeeper-sidekiq](https://github.com/cpoms/innkeeper-sidekiq)
 
 ## Contributing
 
@@ -480,6 +480,6 @@ See [apartment-sidekiq](https://github.com/influitive/apartment-sidekiq)
 
 ## License
 
-Apartment is released under the [MIT License](http://www.opensource.org/licenses/MIT).
+Innkeeper is released under the [MIT License](http://www.opensource.org/licenses/MIT).
 
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/influitive/apartment/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/cpoms/innkeeper/trend.png)](https://bitdeli.com/free "Bitdeli Badge")

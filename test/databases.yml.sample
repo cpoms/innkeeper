@@ -2,28 +2,28 @@
 connections:
   postgresql:
     adapter: postgresql
-    database: apartment_postgresql_test
+    database: innkeeper_postgresql_test
     username: postgres
     min_messages: WARNING
     driver: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/apartment_postgresql_test
+    url: jdbc:postgresql://localhost:5432/innkeeper_postgresql_test
     timeout: 5000
     pool: 5
 
   mysql:
     adapter: mysql
-    database: apartment_mysql_test
+    database: innkeeper_mysql_test
     username: root
     min_messages: WARNING
     driver: com.mysql.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/apartment_mysql_test
+    url: jdbc:mysql://localhost:3306/innkeeper_mysql_test
     timeout: 5000
     pool: 5
 <% else %>
 connections:
   postgresql:
     adapter: postgresql
-    database: apartment_postgresql_test
+    database: innkeeper_postgresql_test
     min_messages: WARNING
     username: postgres
     schema_search_path: public
@@ -31,7 +31,7 @@ connections:
 
   mysql:
     adapter: mysql2
-    database: apartment_mysql_test
+    database: innkeeper_mysql_test
     username: root
     password:
 <% end %>
