@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
   s.homepage = %q{https://github.com/cpoms/innkeeper}
   s.licenses = ["MIT"]
 
-  s.add_dependency 'activerecord',    '>= 5.1.0'
+  s.add_dependency 'activerecord',    '>= 5.2.0'
   s.add_dependency 'rack',            '>= 1.3.6'
   s.add_dependency 'public_suffix',   '~> 2.0.5'
   s.add_dependency 'parallel',        '>= 0.7.1'
