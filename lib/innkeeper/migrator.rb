@@ -10,7 +10,7 @@ module Innkeeper
       Tenant.switch(database) do
         version = ENV["VERSION"] ? ENV["VERSION"].to_i : nil
 
-        ActiveRecord::Migrator.migrate(ActiveRecord::Migrator.migrations_paths, version) do |migration|
+        ActiveRecord::Base.connection.migration_context.migrate(version) do |migration|
           ENV["SCOPE"].blank? || (ENV["SCOPE"] == migration.scope)
         end
       end
@@ -19,14 +19,14 @@ module Innkeeper
     # Migrate up/down to a specific version
     def run(direction, database, version)
       Tenant.switch(database) do
-        ActiveRecord::Migrator.run(direction, ActiveRecord::Migrator.migrations_paths, version)
+        ActiveRecord::Base.connection.migration_context.run(direction, version)
       end
     end
 
     # rollback latest migration `step` number of times
     def rollback(database, step = 1)
       Tenant.switch(database) do
-        ActiveRecord::Migrator.rollback(ActiveRecord::Migrator.migrations_paths, step)
+        ActiveRecord::Base.connection.migration_context.rollback(step)
       end
     end
   end
